@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Collections.Generic;
 using Newtonsoft.Json;
@@ -97,13 +98,8 @@ namespace Survey
                 selected = 0;                                               // значення змінних які в класі прописані кожен раз
                 optionsCount = current_question.Answers.Count;              // але не хочу їх носити в рендер через функцію, хоча напевно
                                                                             // просто вносити в функцію було б більш правильно
-                chosenAnswersCount = 0;
 
-                foreach (Answer answer in current_question.Answers) // фул костиль, але хз як інакше реалізувати повернення назад
-                {
-                    if (answer.is_chosen)
-                        chosenAnswersCount++;
-                }
+                chosenAnswersCount = current_question.Answers.Count(a => a.is_chosen);
 
                 while (true)
                 {
@@ -245,31 +241,14 @@ namespace Survey
 
             public void Result()
             {
-                int points = 0;
+                int points = survey.Questions.Sum(q => q.Answers.Where(a => a.is_chosen).Sum(a => a.Points));
 
-                int closest = 0;
-
-                foreach (Question question in survey.Questions)
-                {
-                    foreach (Answer answer in question.Answers)
-                    {
-                        if (answer.is_chosen)
-                        {
-                            points += answer.Points;
-                        }
-                    }
-                }
-
-                foreach (Mark mark in survey.Marks)
-                {
-                    if (points >= mark.MinimalPoints)
-                        closest = survey.Marks.IndexOf(mark);
-                }
+                Mark mark = survey.Marks.First(m => m.MinimalPoints <= points);
 
                 Console.Clear();
                 Console.ForegroundColor = ConsoleColor.DarkYellow;
                 Console.WriteLine($"Ur result is {points} points");
-                Console.WriteLine(survey.Marks[closest].Text);
+                Console.WriteLine(mark.Text);
                 Console.ResetColor();
                 Thread.Sleep(1000);
             }
