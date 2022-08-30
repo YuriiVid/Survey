@@ -130,7 +130,7 @@ namespace Survey
                                     Thread.Sleep(1500);
                                     break;
                                 }
-                                
+
                                 current_question.Answers[selected].is_chosen = true;
                                 points += current_question.Answers[selected].Points;
                                 chosenAnswersCount++;
@@ -150,6 +150,7 @@ namespace Survey
                             {
                                 Console.WriteLine("You`re at last question now");
                                 Thread.Sleep(1500);
+                                break;
                             }
                             return;
 
@@ -160,8 +161,10 @@ namespace Survey
                             {
                                 Console.WriteLine("You`re at first question now");
                                 Thread.Sleep(1500);
+                                break;
                             }
                             return;
+
 
                         case ConsoleKey.Enter:
                             Result();
@@ -241,7 +244,7 @@ namespace Survey
 
             void StartSurvey() //хз чо окрема функція, але най буде, енівей це всьо тупо якось
             {
-                ChooseAnswers(0); 
+                ChooseAnswers(0);
             }
 
             public void Result()
