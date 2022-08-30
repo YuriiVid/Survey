@@ -80,8 +80,6 @@ namespace Survey
         {
             Survey survey;
 
-            int points = 0;
-
             int selected;
 
             int optionsCount;
@@ -132,14 +130,12 @@ namespace Survey
                                 }
 
                                 current_question.Answers[selected].is_chosen = true;
-                                points += current_question.Answers[selected].Points;
                                 chosenAnswersCount++;
                             }
                             else
                             {
                                 chosenAnswersCount--;
                                 current_question.Answers[selected].is_chosen = false;
-                                points -= current_question.Answers[selected].Points;
                             }
                             break;
 
@@ -249,7 +245,21 @@ namespace Survey
 
             public void Result()
             {
+                int points = 0;
+
                 int closest = 0;
+
+                foreach (Question question in survey.Questions)
+                {
+                    foreach (Answer answer in question.Answers)
+                    {
+                        if (answer.is_chosen)
+                        {
+                            points += answer.Points;
+                        }
+                    }
+                }
+
                 foreach (Mark mark in survey.Marks)
                 {
                     if (points >= mark.MinimalPoints)
