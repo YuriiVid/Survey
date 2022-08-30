@@ -76,14 +76,14 @@ namespace Survey
 
         const string PathToSurveyFile = "Survey.json";
 
-        static int ChooseAnswersAndGetPoints(List<Answer> answers, int answers_number)
         class Menu
         {
-            int selected = 0, points = 0;
-            int optionsCount = answers.Count;
-            bool done = false;
+            Survey survey;
+
             int points = 0;
+
             int selected;
+
             int optionsCount;
 
             int chosenAnswersCount;
