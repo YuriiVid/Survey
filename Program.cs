@@ -51,7 +51,7 @@ namespace Survey
             [JsonProperty(PropertyName = "points")]
             public int Points { get; }
 
-            public bool is_chosen = false;
+            public bool IsChosen = false;
 
             public Answer(string Text, int Points)
             {
@@ -77,99 +77,73 @@ namespace Survey
 
         const string PathToSurveyFile = "Survey.json";
 
-        class Menu
+        class TestRunner
         {
-            Survey survey;
+            public Survey survey;
 
-            int selected;
+            public int questionIndex = 0;
 
-            int optionsCount;
-
-            int chosenAnswersCount;
-
-            public Menu(Survey survey)
+            public TestRunner(Survey survey)
             {
                 this.survey = survey;
             }
 
-            public void ChooseAnswers(int questionIndex)
+            public Question GetCurrentQuestion()
             {
-                Question current_question = survey.Questions[questionIndex];// тут взагалі хз чи так варто робити, я по суті перезадаю
-                selected = 0;                                               // значення змінних які в класі прописані кожен раз
-                optionsCount = current_question.Answers.Count;              // але не хочу їх носити в рендер через функцію, хоча напевно
-                                                                            // просто вносити в функцію було б більш правильно
-
-                chosenAnswersCount = current_question.Answers.Count(a => a.is_chosen);
-
-                while (true)
-                {
-                    Render(current_question);
-
-                    switch (Console.ReadKey(intercept: true).Key)
-                    {
-                        case ConsoleKey.UpArrow:
-                            selected = Math.Max(0, selected - 1);
-                            break;
-
-                        case ConsoleKey.DownArrow:
-                            selected = Math.Min(optionsCount - 1, selected + 1);
-                            break;
-
-                        case ConsoleKey.Spacebar:
-                            if (!current_question.Answers[selected].is_chosen)
-                            {
-                                if (chosenAnswersCount == current_question.AnswersNumber)
-                                {
-                                    Console.WriteLine("You've already selected maximum number of answers");
-                                    Thread.Sleep(1500);
-                                    break;
-                                }
-
-                                current_question.Answers[selected].is_chosen = true;
-                                chosenAnswersCount++;
-                            }
-                            else
-                            {
-                                chosenAnswersCount--;
-                                current_question.Answers[selected].is_chosen = false;
-                            }
-                            break;
-
-                        case ConsoleKey.RightArrow:
-                            if (questionIndex != survey.Questions.Count - 1) //хз чи норм індекси провіряю, але вже як є
-                                ChooseAnswers(questionIndex + 1);
-                            else
-                            {
-                                Console.WriteLine("You`re at last question now");
-                                Thread.Sleep(1500);
-                                break;
-                            }
-                            return;
-
-                        case ConsoleKey.LeftArrow:
-                            if (questionIndex != 0) // то саме
-                                ChooseAnswers(questionIndex - 1);
-                            else
-                            {
-                                Console.WriteLine("You`re at first question now");
-                                Thread.Sleep(1500);
-                                break;
-                            }
-                            return;
-
-
-                        case ConsoleKey.Enter:
-                            Result();
-                            return;
-
-                        default:
-                            Console.WriteLine("Wrong key");
-                            break;
-                    }
-                }
+                return survey.Questions[questionIndex];
             }
 
-            void Render(Question question)
+            public Question NextQuestion()
+            {
+                return survey.Questions[++questionIndex];
+            }
+
+            public Question PreviousQuestion()
+            {
+                return survey.Questions[--questionIndex];
+            }
+
+            public bool IsLast()
+            {
+                return (questionIndex == survey.Questions.Count - 1);
+            }
+
+            public bool IsFirst()
+            {
+                return (questionIndex == 0);
+            }
+
+            public void Result()
+            {
+                int points = survey.Questions.Sum(q => q.Answers.Where(a => a.IsChosen).Sum(a => a.Points));
+
+                Mark mark = survey.Marks.First(m => m.MinimalPoints <= points);
+
+                Console.Clear();
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                Console.WriteLine($"Your result is {points} points");
+                Console.WriteLine(mark.Text);
+                Console.ResetColor();
+                Thread.Sleep(1000);
+            }
+        }
+
+        class Render
+        {
+            int chosenAnswersCount;
+
+            int optionsCount;
+
+            int selected;
+
+            public Render(int chosenAnswersCount, int optionsCount, int selected)
+            {
+                this.chosenAnswersCount = chosenAnswersCount;
+                this.optionsCount = optionsCount;
+                this.selected = selected;
+            }
+
+            public void DisplayQuestion(Question question)
             {
                 Console.Clear();
 
@@ -191,7 +165,7 @@ namespace Survey
                         Console.ForegroundColor = ConsoleColor.Cyan;
                         Console.Write("> ");
                     }
-                    else if (question.Answers[i].is_chosen)
+                    else if (question.Answers[i].IsChosen)
                     {
                         Console.ForegroundColor = ConsoleColor.Yellow;
                         Console.Write("+ ");
@@ -206,59 +180,113 @@ namespace Survey
                     Console.ResetColor();
                 }
             }
-
-            public void Start() // хз чи нужно ваще, але мені здалось шо так буде правильніше
-            {
-                while (true)
-                {
-                    Console.Clear();
-                    Console.ForegroundColor = ConsoleColor.DarkMagenta;
-                    Console.WriteLine("Press Space if you want to start survey, ESC - to exit the program");
-                    Console.ResetColor();
-
-                    switch (Console.ReadKey(intercept: true).Key)
-                    {
-                        case ConsoleKey.Spacebar:
-                            StartSurvey();
-                            return;
-
-                        case ConsoleKey.Escape:
-                            Console.WriteLine("Goodbye");
-                            Thread.Sleep(1500);
-                            return;
-                        default:
-                            Console.WriteLine("Wrong key");
-                            Thread.Sleep(1000);
-                            break;
-                    }
-                }
-            }
-
-            void StartSurvey() //хз чо окрема функція, але най буде, енівей це всьо тупо якось
-            {
-                ChooseAnswers(0);
-            }
-
-            public void Result()
-            {
-                int points = survey.Questions.Sum(q => q.Answers.Where(a => a.is_chosen).Sum(a => a.Points));
-
-                Mark mark = survey.Marks.First(m => m.MinimalPoints <= points);
-
-                Console.Clear();
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine($"Ur result is {points} points");
-                Console.WriteLine(mark.Text);
-                Console.ResetColor();
-                Thread.Sleep(1000);
-            }
         }
 
         static void Main(string[] args) //зато мейн красівий
         {
             Survey survey = JsonConvert.DeserializeObject<Survey>(File.ReadAllText(PathToSurveyFile));
-            Menu menu = new Menu(survey);
-            menu.Start();
+
+            TestRunner testRunner = new TestRunner(survey);
+
+            // while (true)
+            // {
+            //     Console.Clear();
+            //     Console.ForegroundColor = ConsoleColor.DarkMagenta;
+            //     Console.WriteLine("Press Space if you want to start survey, ESC - to exit the program");
+            //     Console.ResetColor();
+
+            //     switch (Console.ReadKey(intercept: true).Key)
+            //     {
+            //         case ConsoleKey.Spacebar:
+            //             StartSurvey();
+            //             break;
+
+            //         case ConsoleKey.Escape:
+            //             Console.WriteLine("Goodbye");
+            //             Thread.Sleep(1500);
+            //             break;
+            //         default:
+            //             Console.WriteLine("Wrong key");
+            //             Thread.Sleep(1000);
+            //             break;
+            //     }
+            // }
+            Question question = testRunner.GetCurrentQuestion();
+
+            int selected = 0;
+
+            while (true)
+            {
+                int chosenAnswersCount = question.Answers.Count(a => a.IsChosen);
+
+                int optionsCount = question.Answers.Count;
+
+                Render render = new Render(chosenAnswersCount, optionsCount, selected);
+
+                render.DisplayQuestion(question);
+
+                switch (Console.ReadKey(intercept: true).Key)
+                {
+                    case ConsoleKey.UpArrow:
+                        selected = Math.Max(0, selected - 1);
+                        break;
+
+                    case ConsoleKey.DownArrow:
+                        selected = Math.Min(optionsCount - 1, selected + 1);
+                        break;
+
+                    case ConsoleKey.Spacebar:
+                        if (!question.Answers[selected].IsChosen)
+                        {
+                            if (chosenAnswersCount == question.AnswersNumber)
+                            {
+                                Console.WriteLine("You've already selected maximum number of answers");
+                                Thread.Sleep(1500);
+                                break;
+                            }
+                            question.Answers[selected].IsChosen = true;
+                        }
+                        else
+                        {
+                            question.Answers[selected].IsChosen = false;
+                        }
+                        break;
+
+                    case ConsoleKey.RightArrow:
+                        if (!testRunner.IsLast())
+                        {
+                            question = testRunner.NextQuestion();
+                            selected = 0;
+                        }
+                        else
+                        {
+                            Console.WriteLine("You`re at last question now");
+                            Thread.Sleep(1500);
+                        }
+                        break;
+
+                    case ConsoleKey.LeftArrow:
+                        if (!testRunner.IsFirst())
+                        {
+                            question = testRunner.PreviousQuestion();
+                            selected = 0;
+                        }
+                        else
+                        {
+                            Console.WriteLine("You`re at first question now");
+                            Thread.Sleep(1500);
+                        }
+                        break;
+
+                    case ConsoleKey.Enter:
+                        testRunner.Result();
+                        return;
+
+                    default:
+                        Console.WriteLine("Wrong key");
+                        break;
+                }
+            }
         }
     }
 }
