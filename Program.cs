@@ -79,9 +79,9 @@ namespace Survey
 
         class TestRunner
         {
-            public Survey survey;
+            Survey survey;
 
-            public int questionIndex = 0;
+            int questionIndex = 0;
 
             public TestRunner(Survey survey)
             {
@@ -113,44 +113,29 @@ namespace Survey
                 return (questionIndex == 0);
             }
 
-            public void Result()
+            public int GetPoints()
             {
-                int points = survey.Questions.Sum(q => q.Answers.Where(a => a.IsChosen).Sum(a => a.Points));
-
-                Mark mark = survey.Marks.First(m => m.MinimalPoints <= points);
-
-                Console.Clear();
-                Console.ForegroundColor = ConsoleColor.DarkYellow;
-                Console.WriteLine($"Your result is {points} points");
-                Console.WriteLine(mark.Text);
-                Console.ResetColor();
-                Thread.Sleep(1000);
+                return survey.Questions.Sum(q => q.Answers.Where(a => a.IsChosen).Sum(a => a.Points));
+            }
+            public Mark GetMark(int points)
+            {
+                return survey.Marks.Last(m => m.MinimalPoints >= points);
             }
         }
 
         class Render
         {
-            int chosenAnswersCount;
-
-            int optionsCount;
-
-            int selected;
-
-            public Render(int chosenAnswersCount, int optionsCount, int selected)
+            public static void DisplayQuestion(Question question, int selected)
             {
-                this.chosenAnswersCount = chosenAnswersCount;
-                this.optionsCount = optionsCount;
-                this.selected = selected;
-            }
+                int chosenAnswersCount = question.Answers.Count(a => a.IsChosen);
 
-            public void DisplayQuestion(Question question)
-            {
                 Console.Clear();
 
                 Console.ForegroundColor = ConsoleColor.DarkBlue;
                 Console.WriteLine("Press ArrowDown and ArrowUp to navigate beetween answers,");
                 Console.WriteLine("Space - choose answer, RightArrow - move to the next question,");
                 Console.WriteLine("LeftArrow - move to the previous question, Enter - submit survey");
+                Console.WriteLine("Esc - exit program");
 
                 Console.ForegroundColor = ConsoleColor.DarkGreen;
                 Console.WriteLine($"[You've selected {chosenAnswersCount}/{question.AnswersNumber} answers]");
@@ -158,7 +143,7 @@ namespace Survey
                 Console.ResetColor();
                 Console.WriteLine(question.Text);
 
-                for (int i = 0; i < optionsCount; i++)
+                for (int i = 0; i < question.Answers.Count; i++)
                 {
                     if (selected == i)
                     {
@@ -180,37 +165,23 @@ namespace Survey
                     Console.ResetColor();
                 }
             }
+            public static void ShowResult(Mark mark, int points)
+            {
+                Console.Clear();
+                Console.ForegroundColor = ConsoleColor.DarkYellow;
+                Console.WriteLine($"Your result is {points} points");
+                Console.WriteLine(mark.Text);
+                Console.ResetColor();
+                Thread.Sleep(1000);
+            }
         }
 
-        static void Main(string[] args) //зато мейн красівий
+        static void Main(string[] args)
         {
             Survey survey = JsonConvert.DeserializeObject<Survey>(File.ReadAllText(PathToSurveyFile));
 
             TestRunner testRunner = new TestRunner(survey);
 
-            // while (true)
-            // {
-            //     Console.Clear();
-            //     Console.ForegroundColor = ConsoleColor.DarkMagenta;
-            //     Console.WriteLine("Press Space if you want to start survey, ESC - to exit the program");
-            //     Console.ResetColor();
-
-            //     switch (Console.ReadKey(intercept: true).Key)
-            //     {
-            //         case ConsoleKey.Spacebar:
-            //             StartSurvey();
-            //             break;
-
-            //         case ConsoleKey.Escape:
-            //             Console.WriteLine("Goodbye");
-            //             Thread.Sleep(1500);
-            //             break;
-            //         default:
-            //             Console.WriteLine("Wrong key");
-            //             Thread.Sleep(1000);
-            //             break;
-            //     }
-            // }
             Question question = testRunner.GetCurrentQuestion();
 
             int selected = 0;
@@ -219,11 +190,7 @@ namespace Survey
             {
                 int chosenAnswersCount = question.Answers.Count(a => a.IsChosen);
 
-                int optionsCount = question.Answers.Count;
-
-                Render render = new Render(chosenAnswersCount, optionsCount, selected);
-
-                render.DisplayQuestion(question);
+                Render.DisplayQuestion(question, selected);
 
                 switch (Console.ReadKey(intercept: true).Key)
                 {
@@ -232,7 +199,7 @@ namespace Survey
                         break;
 
                     case ConsoleKey.DownArrow:
-                        selected = Math.Min(optionsCount - 1, selected + 1);
+                        selected = Math.Min(question.Answers.Count - 1, selected + 1);
                         break;
 
                     case ConsoleKey.Spacebar:
@@ -279,9 +246,14 @@ namespace Survey
                         break;
 
                     case ConsoleKey.Enter:
-                        testRunner.Result();
+                        int points = testRunner.GetPoints();
+                        Mark mark = testRunner.GetMark(points);
+                        Render.ShowResult(mark, points);
                         return;
 
+                    case ConsoleKey.Escape:
+                        Console.WriteLine("Exited successfully");
+                        return;
                     default:
                         Console.WriteLine("Wrong key");
                         break;
